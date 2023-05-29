@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 
 namespace InvoiceWebAPI.Controllers
 {
@@ -55,7 +56,11 @@ namespace InvoiceWebAPI.Controllers
         }
 
         [HttpPost ("register")]
-        public IActionResult RegisterInvoice(Invoice invoice)
+        public IActionResult RegisterInvoice(
+            string suplier = "Suplier",
+            string currency = "EUR",
+            decimal amount = 0,
+            string? description = "Description")
         {
             try
             {
@@ -64,9 +69,11 @@ namespace InvoiceWebAPI.Controllers
                     return BadRequest(ModelState);
                 }
 
-                if (_invoiceManager.RegisterInvoiceInDb(invoice))
+                Invoice invoice = _invoiceManager.RegisterInvoiceInDb(suplier, currency, amount, description);
+
+                if (invoice != null)
                 {
-                    return CreatedAtAction(nameof(GetInvoiceAsync), new { id = invoice.Id }, invoice);
+                    return Ok($"Invoice {invoice.Id} successfully created and registered\n{JsonConvert.SerializeObject(invoice)}");
                 }
                 else
                 {
@@ -80,16 +87,22 @@ namespace InvoiceWebAPI.Controllers
         }
 
         [HttpPut ("update/{id}")]
-        public async Task<IActionResult> UpdateInvoiceAsync(Guid id, Invoice updatedInvoice)
+        public async Task<IActionResult> UpdateInvoiceAsync(
+            Guid id,
+            string? suplier = null,
+            string? currency = null,
+            decimal? amount = null,
+            string? description = null)
         {
             try
             {
-                if(!await _invoiceManager.UpdateInvoiceInDbAsync(id, updatedInvoice).ConfigureAwait(false))
+                Invoice updatedInvoice = await _invoiceManager.UpdateInvoiceInDbAsync(id, suplier, currency, amount, description).ConfigureAwait(false);
+                if (updatedInvoice == null)
                 {
                     throw (new Exception("Something went wrong while updating the invoice"));
                 }
 
-                return Ok($"Invoice {id} successfully updated");
+                return Ok($"Invoice {id} successfully updated\n{JsonConvert.SerializeObject(updatedInvoice)}");
             }
             catch (Exception ex)
             {

@@ -1,6 +1,7 @@
 ﻿using InvoiceWebAPI.Controllers;
 using InvoiceWebAPI.InvoiceDatabase;
 using Microsoft.EntityFrameworkCore;
+using System.Text.RegularExpressions;
 
 namespace InvoiceWebAPI
 {
@@ -65,27 +66,52 @@ namespace InvoiceWebAPI
             }
         }
 
-        public bool RegisterInvoiceInDb(Invoice invoice)
+        public Invoice RegisterInvoiceInDb(
+            string suplier,
+            string currency,
+            decimal amount,
+            string? description)
         {
             try
             {
                 UseSqlServer();
 
+                Invoice invoice = new()
+                {
+                    Id = Guid.NewGuid(),
+                    Suplier = suplier,
+                    DateIssued = DateTime.UtcNow,
+                    Currency = currency,
+                    Amount = (decimal)amount,
+                    Description = description ?? "Empty Field"
+
+                };
+
+                if (!IsValidCurrencyCode(currency))
+                {
+                    throw new Exception("Invalid currency code. Currency codes must be composed by 3 uppercase letters");
+                }
+
                 using (var dbContext = new InvoiceDbContext(_optionsBuilder.Options))
                 {
                     dbContext.Invoices.Add(invoice);
                     dbContext.SaveChanges();
-                    return true;
+                    return invoice;
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex.Message);
-                return false;
+                throw;
             }
         }
 
-        public async Task<bool> UpdateInvoiceInDbAsync(Guid id, Invoice updatedInvoice)
+        public async Task<Invoice> UpdateInvoiceInDbAsync(
+            Guid id, 
+            string? suplier = null,  
+            string? currency = null, 
+            decimal? amount = null, 
+            string? description = null)
         {
             try
             {
@@ -96,19 +122,36 @@ namespace InvoiceWebAPI
                     Invoice existingInvoice = await RetrieveInvoiceByIdAsync(id) ?? 
                         throw new Exception($"Could not find the invoice with id {id}");
 
-                    existingInvoice.Currency = updatedInvoice.Currency;
-                    existingInvoice.Amount = updatedInvoice.Amount;
-                    existingInvoice.Suplier = updatedInvoice.Suplier;
-                    existingInvoice.Description = updatedInvoice.Description;
-
-                    if (!(existingInvoice.Id == updatedInvoice.Id) || !(existingInvoice.DateIssued == updatedInvoice.DateIssued))
+                    if (!string.IsNullOrEmpty(suplier))
                     {
-                        throw new Exception("Can not update Invoice Id or Date Issued");
+                        existingInvoice.Suplier = suplier;
+                    }
+
+                    if (!string.IsNullOrEmpty(currency))
+                    {
+                        if (!IsValidCurrencyCode(currency))
+                        {
+                            throw new Exception("Invalid currency code. Currency codes must be composed by 3 uppercase letters");
+                        }
+                        else
+                        {
+                            existingInvoice.Currency = currency;
+                        }
+                    }
+
+                    if (amount != null)
+                    {
+                        existingInvoice.Amount = (decimal)amount;
+                    }
+
+                    if (!string.IsNullOrEmpty(description))
+                    {
+                        existingInvoice.Description = description;
                     }
 
                     dbContext.Invoices.Update(existingInvoice);
                     dbContext.SaveChanges();
-                    return true;
+                    return existingInvoice;
                 }
             }
             catch (Exception ex)
@@ -153,6 +196,16 @@ namespace InvoiceWebAPI
                 _logger.LogError(ex.Message);
                 throw new Exception("Connection to DB failed.");
             }
+        }
+
+        private static bool IsValidCurrencyCode(string currencyCode)
+        {
+            string pattern = @"^[A-Z]{3}$"; // Three uppercase letters
+
+            Regex regex = new(pattern);
+
+            return regex.IsMatch(currencyCode);
+
         }
     }
 }
