@@ -49,11 +49,16 @@ namespace InvoiceWebAPI
 
                     if (!string.IsNullOrEmpty(currency) && currency != invoice.Currency)
                     {
+                        if (!IsValidCurrencyCode(currency.ToUpper()))
+                        {
+                            throw new Exception("Invalid currency code. Currency codes must be composed by 3 uppercase letters");
+                        }
+
                         CurrencyExchanger _currencyExchanger = new(_configuration, _logger);
 
-                        decimal currencyExchange = await _currencyExchanger.GetExchangeRateAsync(invoice.Currency, currency).ConfigureAwait(false);
+                        decimal currencyExchange = await _currencyExchanger.GetExchangeRateAsync(invoice.Currency, currency.ToUpper()).ConfigureAwait(false);
                         invoice.Amount *= currencyExchange;
-                        invoice.Currency = currency;
+                        invoice.Currency = currency.ToUpper();
                     }
 
                     return invoice;
@@ -76,21 +81,22 @@ namespace InvoiceWebAPI
             {
                 UseSqlServer();
 
+
+                if (!IsValidCurrencyCode(currency.ToUpper()))
+                {
+                    throw new Exception("Invalid currency code. Currency codes must be composed by 3 uppercase letters");
+                }
+
                 Invoice invoice = new()
                 {
                     Id = Guid.NewGuid(),
                     Suplier = suplier,
                     DateIssued = DateTime.UtcNow,
-                    Currency = currency,
+                    Currency = currency.ToUpper(),
                     Amount = (decimal)amount,
                     Description = description ?? "Empty Field"
 
                 };
-
-                if (!IsValidCurrencyCode(currency))
-                {
-                    throw new Exception("Invalid currency code. Currency codes must be composed by 3 uppercase letters");
-                }
 
                 using (var dbContext = new InvoiceDbContext(_optionsBuilder.Options))
                 {
@@ -123,14 +129,9 @@ namespace InvoiceWebAPI
                     Invoice existingInvoice = await RetrieveInvoiceByIdAsync(id) ?? 
                         throw new Exception($"Could not find the invoice with id {id}");
 
-                    if (!string.IsNullOrEmpty(suplier))
-                    {
-                        existingInvoice.Suplier = suplier;
-                    }
-
                     if (!string.IsNullOrEmpty(currency))
                     {
-                        if (!IsValidCurrencyCode(currency))
+                        if (!IsValidCurrencyCode(currency.ToUpper()))
                         {
                             throw new Exception("Invalid currency code. Currency codes must be composed by 3 uppercase letters");
                         }
@@ -140,12 +141,17 @@ namespace InvoiceWebAPI
                             {
                                 CurrencyExchanger _currencyExchanger = new(_configuration, _logger);
 
-                                decimal currencyExchange = await _currencyExchanger.GetExchangeRateAsync(existingInvoice.Currency, currency).ConfigureAwait(false);
+                                decimal currencyExchange = await _currencyExchanger.GetExchangeRateAsync(existingInvoice.Currency, currency.ToUpper()).ConfigureAwait(false);
                                 existingInvoice.Amount *= currencyExchange;
                             }
 
-                            existingInvoice.Currency = currency;
+                            existingInvoice.Currency = currency.ToUpper();
                         }
+                    }
+
+                    if (!string.IsNullOrEmpty(suplier))
+                    {
+                        existingInvoice.Suplier = suplier;
                     }
 
                     if (amount != null)
