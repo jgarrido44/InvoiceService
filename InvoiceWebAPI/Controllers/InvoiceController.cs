@@ -43,14 +43,11 @@ namespace InvoiceWebAPI.Controllers
             {
                 Invoice invoice = await _invoiceManager.RetrieveInvoiceByIdAsync(id, currency).ConfigureAwait(false);
 
-                //_logger.LogInformation($"The invoice with Id {id} was retrieved successfully");
-
                 return Ok(invoice);
             }
             catch (Exception ex)
             {
-                //_logger.LogError(ex, "Failed to retrieve invoice from database");
-
+                _logger.LogError(ex.Message);
                 return StatusCode(500, $"Failed to retrieve the invoice with Id {id}. {ex.Message}");
             }
         }
@@ -91,12 +88,13 @@ namespace InvoiceWebAPI.Controllers
             Guid id,
             string? suplier = null,
             string? currency = null,
+            bool updateCurrencyAmount = false,
             decimal? amount = null,
             string? description = null)
         {
             try
             {
-                Invoice updatedInvoice = await _invoiceManager.UpdateInvoiceInDbAsync(id, suplier, currency, amount, description).ConfigureAwait(false);
+                Invoice updatedInvoice = await _invoiceManager.UpdateInvoiceInDbAsync(id, suplier, currency, updateCurrencyAmount, amount, description).ConfigureAwait(false);
                 if (updatedInvoice == null)
                 {
                     throw (new Exception("Something went wrong while updating the invoice"));

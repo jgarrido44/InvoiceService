@@ -1,6 +1,6 @@
 ﻿namespace InvoiceWebAPI.Helpers
 {
-    public class CurrencyObject
+    public class Currency
     {
         public string result { get; set; }
         public string documentation { get; set; }

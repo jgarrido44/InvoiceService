@@ -34,7 +34,7 @@ namespace InvoiceWebAPI
 
                 string responseContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
-                var exchangeRateData = JsonConvert.DeserializeObject<CurrencyObject>(responseContent) ??
+                var exchangeRateData = JsonConvert.DeserializeObject<Currency>(responseContent) ??
                     throw new Exception("Failed to deserialize currency cbject");
 
                 _logger.LogInformation("Conversion was successful");

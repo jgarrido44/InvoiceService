@@ -47,7 +47,7 @@ namespace InvoiceWebAPI
                 {
                     Invoice invoice = dbContext.Invoices.FirstOrDefault(i => i.Id == id) ?? throw new Exception($"The invoice with Id {id} was not found.");
 
-                    if (currency != null && !currency.Equals(string.Empty) && currency != invoice.Currency)
+                    if (!string.IsNullOrEmpty(currency) && currency != invoice.Currency)
                     {
                         CurrencyExchanger _currencyExchanger = new(_configuration, _logger);
 
@@ -109,7 +109,8 @@ namespace InvoiceWebAPI
         public async Task<Invoice> UpdateInvoiceInDbAsync(
             Guid id, 
             string? suplier = null,  
-            string? currency = null, 
+            string? currency = null,
+            bool updateCurrencyAmount = false,
             decimal? amount = null, 
             string? description = null)
         {
@@ -135,8 +136,20 @@ namespace InvoiceWebAPI
                         }
                         else
                         {
+                            if (updateCurrencyAmount)
+                            {
+                                CurrencyExchanger _currencyExchanger = new(_configuration, _logger);
+
+                                decimal currencyExchange = await _currencyExchanger.GetExchangeRateAsync(existingInvoice.Currency, currency).ConfigureAwait(false);
+                                existingInvoice.Amount *= currencyExchange;
+                            }
+
                             existingInvoice.Currency = currency;
                         }
+                    }
+                    else
+                    {
+
                     }
 
                     if (amount != null)
