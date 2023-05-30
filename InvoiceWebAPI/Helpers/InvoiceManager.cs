@@ -147,10 +147,6 @@ namespace InvoiceWebAPI
                             existingInvoice.Currency = currency;
                         }
                     }
-                    else
-                    {
-
-                    }
 
                     if (amount != null)
                     {
